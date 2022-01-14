@@ -104,7 +104,7 @@ func find(path string) {
 	}
 
 	if len(dependencies) == 0 {
-		fmt.Println("all modules up to date")
+		fmt.Println("everything up-to-date")
 	}
 
 	for k, v := range dependencies {
