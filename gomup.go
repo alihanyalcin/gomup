@@ -31,17 +31,14 @@ type Dependency struct {
 	updateVersion string
 }
 
-func findDepencencies(path string, dependencies map[string][]Dependency, wg *sync.WaitGroup) {
-	wg.Add(1)
-	defer wg.Done()
-
+func findDepencencies(path string) ([]Dependency, error) {
 	var dependency []Dependency
 
 	cmd := exec.Command("go", args...)
 	cmd.Dir = path
 	list, err := cmd.Output()
 	if err != nil {
-		// TODO: add log
+		return nil, err
 	}
 
 	depList := strings.Split(string(list), "\n")
@@ -57,7 +54,7 @@ func findDepencencies(path string, dependencies map[string][]Dependency, wg *syn
 		}
 	}
 
-	dependencies[path] = dependency
+	return dependency, nil
 }
 
 func find(path string) {
@@ -65,6 +62,7 @@ func find(path string) {
 	s.Prefix = "Starting gomup "
 	s.Start()
 
+	var findError error
 	var wg sync.WaitGroup
 	dependencies := make(map[string][]Dependency)
 
@@ -75,7 +73,20 @@ func find(path string) {
 			}
 
 			if info.Name() == "go.mod" {
-				go findDepencencies(path[:(len(path)-7)], dependencies, &wg)
+				go func() {
+					wg.Add(1)
+					defer wg.Done()
+
+					modPath := path[:(len(path) - len("/go.mod"))]
+					d, err := findDepencencies(modPath)
+					if err != nil {
+						findError = err
+						return
+					}
+					if len(d) > 0 {
+						dependencies[modPath] = d
+					}
+				}()
 			}
 
 			return nil
@@ -86,6 +97,15 @@ func find(path string) {
 
 	wg.Wait()
 	s.Stop()
+
+	if findError != nil {
+		log.Println("something went wrong:", err)
+		return
+	}
+
+	if len(dependencies) == 0 {
+		fmt.Println("all modules up to date")
+	}
 
 	for k, v := range dependencies {
 		fmt.Println(k, v)
