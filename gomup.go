@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -20,7 +19,7 @@ var args = []string{
 	"-u",
 	"-mod=mod",
 	"-f",
-	"'{{if (and (not (or .Main .Indirect)) .Update)}}{{.Path}}: {{.Version}} -> {{.Update.Version}}{{end}}'",
+	"'{{if (and (not (or .Main .Indirect)) .Update)}}{{.Path}} {{.Version}} {{.Update.Version}}{{end}}'",
 	"-m",
 	"all",
 }
@@ -32,7 +31,7 @@ type Dependency struct {
 }
 
 func findDepencencies(path string) ([]Dependency, error) {
-	var dependency []Dependency
+	var dependencyList []Dependency
 
 	cmd := exec.Command("go", args...)
 	cmd.Dir = path
@@ -41,20 +40,19 @@ func findDepencencies(path string) ([]Dependency, error) {
 		return nil, err
 	}
 
-	depList := strings.Split(string(list), "\n")
-	r := regexp.MustCompile(`'(.+): (.+) -> (.+)'`)
-	for _, d := range depList {
-		if d != "''" && d != "" {
-			d := r.FindStringSubmatch(d)
-			dependency = append(dependency, Dependency{
-				name:          d[1],
-				version:       d[2],
-				updateVersion: d[3],
+	dependencies := strings.Split(string(list), "\n")
+	for _, dependency := range dependencies {
+		if dependency != "''" && dependency != "" {
+			d := strings.Split(dependency, " ")
+			dependencyList = append(dependencyList, Dependency{
+				name:          d[0],
+				version:       d[1],
+				updateVersion: d[2],
 			})
 		}
 	}
 
-	return dependency, nil
+	return dependencyList, nil
 }
 
 func find(path string) {
@@ -62,7 +60,7 @@ func find(path string) {
 	s.Prefix = "Starting gomup "
 	s.Start()
 
-	var findError error
+	var findError []error
 	var wg sync.WaitGroup
 	dependencies := make(map[string][]Dependency)
 
@@ -80,7 +78,8 @@ func find(path string) {
 					modPath := path[:(len(path) - len("/go.mod"))]
 					d, err := findDepencencies(modPath)
 					if err != nil {
-						findError = err
+						// TODO: race condition var gibi, nil donuyor
+						findError = append(findError, err)
 						return
 					}
 					if len(d) > 0 {
@@ -98,7 +97,8 @@ func find(path string) {
 	wg.Wait()
 	s.Stop()
 
-	if findError != nil {
+	if len(findError) > 0 {
+		// TODO: nil donuyor bi sorun var
 		log.Println("something went wrong:", err)
 		return
 	}
