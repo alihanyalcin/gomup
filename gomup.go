@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"gomup/ui"
 	"log"
 	"os"
 	"os/exec"
@@ -110,6 +111,8 @@ func run(path string) error {
 		fmt.Println("everything up-to-date")
 		return nil
 	}
+
+	ui.Start()
 
 	for k, v := range dependencies {
 		fmt.Println(k, v)
