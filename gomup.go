@@ -69,7 +69,7 @@ func find(path string) map[string][]Dependency {
 				go func() {
 					defer wg.Done()
 
-					modPath := path[:(len(path) - len("/go.mod"))]
+					modPath := path[:(len(path) - len("go.mod"))]
 					d, err := findDepencencies(modPath)
 					if err != nil {
 						return
