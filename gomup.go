@@ -31,20 +31,19 @@ type Dependency struct {
 }
 
 func findDepencencies(path string) ([]Dependency, error) {
-	var dependencyList []Dependency
+	var dependencies []Dependency
 
 	cmd := exec.Command("go", args...)
 	cmd.Dir = path
 	list, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("cannot get %s available minor and patch upgrades. Error: %w", path, err)
+		return nil, fmt.Errorf("cannot get %s available minor and patch upgrades. error: %w", path, err)
 	}
 
-	dependencies := strings.Split(string(list), "\n")
-	for _, dependency := range dependencies {
+	for _, dependency := range strings.Split(string(list), "\n") {
 		if dependency != "''" && dependency != "" {
 			d := strings.Split(dependency, " ")
-			dependencyList = append(dependencyList, Dependency{
+			dependencies = append(dependencies, Dependency{
 				name:          d[0],
 				version:       d[1],
 				updateVersion: d[2],
@@ -52,16 +51,12 @@ func findDepencencies(path string) ([]Dependency, error) {
 		}
 	}
 
-	return dependencyList, nil
+	return dependencies, nil
 }
 
-func find(path string) {
-	s := spinner.New(spinner.CharSets[36], 250*time.Millisecond)
-	s.Prefix = "Starting gomup "
-	s.Start()
-
+func find(path string) map[string][]Dependency {
+	var dependencies = make(map[string][]Dependency)
 	var wg sync.WaitGroup
-	dependencies := make(map[string][]Dependency)
 
 	err := filepath.Walk(path,
 		func(path string, info os.FileInfo, err error) error {
@@ -77,7 +72,6 @@ func find(path string) {
 					modPath := path[:(len(path) - len("/go.mod"))]
 					d, err := findDepencencies(modPath)
 					if err != nil {
-						fmt.Println(err)
 						return
 					}
 
@@ -94,15 +88,47 @@ func find(path string) {
 	}
 
 	wg.Wait()
+
+	return dependencies
+}
+
+func run(path string) error {
+	err := checkPath(path)
+	if err != nil {
+		return err
+	}
+
+	s := spinner.New(spinner.CharSets[36], 250*time.Millisecond)
+	s.Prefix = "Starting gomup "
+	s.Start()
+
+	dependencies := find(path)
+
 	s.Stop()
 
 	if len(dependencies) == 0 {
 		fmt.Println("everything up-to-date")
+		return nil
 	}
 
 	for k, v := range dependencies {
 		fmt.Println(k, v)
 	}
+
+	return nil
+}
+
+func checkPath(path string) error {
+	info, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return err
+	}
+
+	if !info.IsDir() {
+		return fmt.Errorf("%s is not a directory", path)
+	}
+
+	return nil
 }
 
 func main() {
@@ -123,9 +149,7 @@ func main() {
 			},
 		},
 		Action: func(c *cli.Context) error {
-			find(path)
-
-			return nil
+			return run(path)
 		},
 		UseShortOptionHandling: true,
 		EnableBashCompletion:   true,
