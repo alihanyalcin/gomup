@@ -37,7 +37,7 @@ func findDepencencies(path string) ([]Dependency, error) {
 	cmd.Dir = path
 	list, err := cmd.Output()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot get %s available minor and patch upgrades. Error: %w", path, err)
 	}
 
 	dependencies := strings.Split(string(list), "\n")
@@ -60,7 +60,6 @@ func find(path string) {
 	s.Prefix = "Starting gomup "
 	s.Start()
 
-	var findError []error
 	var wg sync.WaitGroup
 	dependencies := make(map[string][]Dependency)
 
@@ -71,17 +70,17 @@ func find(path string) {
 			}
 
 			if info.Name() == "go.mod" {
+				wg.Add(1)
 				go func() {
-					wg.Add(1)
 					defer wg.Done()
 
 					modPath := path[:(len(path) - len("/go.mod"))]
 					d, err := findDepencencies(modPath)
 					if err != nil {
-						// TODO: race condition var gibi, nil donuyor
-						findError = append(findError, err)
+						fmt.Println(err)
 						return
 					}
+
 					if len(d) > 0 {
 						dependencies[modPath] = d
 					}
@@ -96,12 +95,6 @@ func find(path string) {
 
 	wg.Wait()
 	s.Stop()
-
-	if len(findError) > 0 {
-		// TODO: nil donuyor bi sorun var
-		log.Println("something went wrong:", err)
-		return
-	}
 
 	if len(dependencies) == 0 {
 		fmt.Println("everything up-to-date")
