@@ -6,9 +6,27 @@ import (
 )
 
 func Start() {
+
 	app := tview.NewApplication()
-	table := tview.NewTable().
-		SetBorders(true)
+	pages := tview.NewPages()
+
+	// Quit Modal
+	quitModal := tview.NewModal().
+		SetText("Do you want to quit?").
+		AddButtons([]string{"Quit", "Cancel"}).
+		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+			if buttonLabel == "Quit" {
+				app.Stop()
+			} else {
+				pages.SendToBack("quit")
+			}
+		})
+
+	pages.AddPage("quit", quitModal, true, true)
+	pages.SendToBack("quit")
+
+	table := tview.NewTable().SetBorders(true)
+	pages.AddPage("table", table, true, true)
 
 	colsHeader := []string{"Path", "Name", "Current Version", "Update Version"}
 	cols, rows := 4, len(dependencies)+1
@@ -19,6 +37,7 @@ func Start() {
 				color = tcell.ColorYellow
 			}
 
+			// Set Headers
 			if r == 0 {
 				table.SetCell(r, c,
 					tview.NewTableCell(colsHeader[c]).
@@ -37,19 +56,18 @@ func Start() {
 	}
 
 	table.SetSelectable(true, false)
+	table.Select(0, 0).SetFixed(1, 0).
+		SetDoneFunc(func(key tcell.Key) {
+			if key == tcell.KeyEscape {
+				pages.SendToFront("quit")
+			}
+		}).
+		SetSelectedFunc(func(row int, column int) {
+			// TODO: add update modal
+			table.GetCell(row, column).SetTextColor(tcell.ColorRed)
+		})
 
-	table.Select(0, 0).SetFixed(1, 1).SetDoneFunc(func(key tcell.Key) {
-		if key == tcell.KeyEscape {
-			app.Stop()
-		}
-		//if key == tcell.KeyEnter {
-		//table.SetSelectable(true, true)
-		//}
-	}).SetSelectedFunc(func(row int, column int) {
-		table.GetCell(row, column).SetTextColor(tcell.ColorRed)
-	})
-
-	if err := app.SetRoot(table, true).EnableMouse(true).Run(); err != nil {
+	if err := app.SetRoot(pages, true).EnableMouse(true).Run(); err != nil {
 		panic(err)
 	}
 }
