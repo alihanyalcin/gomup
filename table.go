@@ -18,7 +18,7 @@ func drawTable() {
 	}
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Path", "Name", "Version", "Update Version"})
+	table.SetHeader([]string{"Path", "Name", "Current Version", "Update Version"})
 	table.SetAutoMergeCells(true)
 	table.SetRowLine(true)
 
