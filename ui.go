@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os/exec"
+	"sort"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -19,6 +20,10 @@ type view struct {
 }
 
 func startUI(d []Dependency) {
+	sort.Slice(d, func(i, j int) bool {
+		return d[i].path < d[j].path
+	})
+
 	v := &view{
 		app:          tview.NewApplication(),
 		pages:        tview.NewPages(),
@@ -79,7 +84,7 @@ func (v *view) setTable() {
 		for c := 0; c < cols; c++ {
 			color := tcell.ColorWhite
 			if c == 0 && r != 0 {
-				color = tcell.ColorDarkCyan
+				color = tcell.ColorAquaMarine
 			} else if c != 0 && r != 0 {
 				color = tcell.ColorRed
 			}
@@ -151,23 +156,12 @@ func (v *view) upgrade(row, cols int) {
 		v.info.SetText("Success!")
 
 		for c := 1; c < cols; c++ {
-			v.table.GetCell(row, c).SetTextColor(tcell.ColorWhite).SetSelectable(false)
+			v.table.GetCell(row, c).SetTextColor(tcell.ColorAquaMarine).SetSelectable(false)
 		}
 	}
 }
 
 func (v *view) getString(row, col int) string {
 	value := v.dependencies[row]
-	switch col {
-	case 0:
-		return value.path
-	case 1:
-		return value.name
-	case 2:
-		return value.version
-	case 3:
-		return value.updateVersion
-	default:
-		return ""
-	}
+	return []string{value.path, value.name, value.version, value.updateVersion}[col]
 }

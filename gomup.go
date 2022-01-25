@@ -14,6 +14,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const gomod = "go.mod"
+
 var args = []string{
 	"list",
 	"-u",
@@ -24,11 +26,10 @@ var args = []string{
 	"all",
 }
 
-var dependencies []Dependency
-
 func main() {
 	var (
 		path string
+		list bool
 	)
 
 	app := &cli.App{
@@ -42,9 +43,41 @@ func main() {
 				Required:    true,
 				Destination: &path,
 			},
+			&cli.BoolFlag{
+				Name:        "list",
+				Aliases:     []string{"l"},
+				Usage:       "list all dependencies",
+				Required:    false,
+				Destination: &list,
+			},
 		},
 		Action: func(c *cli.Context) error {
-			return run(path)
+			err := checkPath(path)
+			if err != nil {
+				return err
+			}
+
+			s := spinner.New(spinner.CharSets[36], 250*time.Millisecond)
+			s.Prefix = "Starting gomUP "
+			s.Start()
+
+			dependencies := find(path)
+
+			s.Stop()
+
+			if len(dependencies) == 0 {
+				fmt.Println("everything up-to-date")
+				return nil
+			}
+
+			if list {
+				drawTable(dependencies)
+				return nil
+			}
+
+			startUI(dependencies)
+
+			return nil
 		},
 		UseShortOptionHandling: true,
 		EnableBashCompletion:   true,
@@ -54,31 +87,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-}
-
-func run(path string) error {
-	err := checkPath(path)
-	if err != nil {
-		return err
-	}
-
-	s := spinner.New(spinner.CharSets[36], 250*time.Millisecond)
-	s.Prefix = "Starting gomup "
-	s.Start()
-
-	find(path)
-
-	s.Stop()
-
-	if len(dependencies) == 0 {
-		fmt.Println("everything up-to-date")
-		return nil
-	}
-
-	startUI(dependencies)
-	//drawTable()
-
-	return nil
 }
 
 func checkPath(path string) error {
@@ -94,8 +102,9 @@ func checkPath(path string) error {
 	return nil
 }
 
-func find(path string) {
+func find(path string) []Dependency {
 	var wg sync.WaitGroup
+	var dependencies []Dependency
 
 	err := filepath.Walk(path,
 		func(path string, info os.FileInfo, err error) error {
@@ -103,16 +112,17 @@ func find(path string) {
 				return err
 			}
 
-			if info.Name() == "go.mod" {
+			if info.Name() == gomod {
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
 
-					modPath := path[:(len(path) - len("go.mod"))]
-					err := findDepencencies(modPath)
+					modPath := path[:(len(path) - len(gomod))]
+					dep, err := findDepencencies(modPath)
 					if err != nil {
 						return
 					}
+					dependencies = append(dependencies, dep...)
 				}()
 			}
 
@@ -123,15 +133,18 @@ func find(path string) {
 	}
 
 	wg.Wait()
+
+	return dependencies
 }
 
-func findDepencencies(path string) error {
+func findDepencencies(path string) ([]Dependency, error) {
+	var dependencies []Dependency
 
 	cmd := exec.Command("go", args...)
 	cmd.Dir = path
 	list, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("cannot get %s available minor and patch upgrades. error: %w", path, err)
+		return nil, fmt.Errorf("cannot get %s available minor and patch upgrades. error: %w", path, err)
 	}
 
 	for _, dep := range strings.Split(string(list), "\n") {
@@ -147,5 +160,5 @@ func findDepencencies(path string) error {
 		}
 	}
 
-	return nil
+	return dependencies, nil
 }
