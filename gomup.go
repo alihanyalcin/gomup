@@ -75,12 +75,8 @@ func run(path string) error {
 		return nil
 	}
 
-	Start()
+	startUI(dependencies)
 	//drawTable()
-
-	//for k, v := range dependencies {
-	//fmt.Println(k, v)
-	//}
 
 	return nil
 }

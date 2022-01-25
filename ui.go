@@ -2,28 +2,34 @@ package main
 
 import (
 	"fmt"
+	"os/exec"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
 type view struct {
-	app    *tview.Application
-	pages  *tview.Pages
-	table  *tview.Table
-	update *tview.Modal
-	quit   *tview.Modal
+	app          *tview.Application
+	pages        *tview.Pages
+	table        *tview.Table
+	update       *tview.Modal
+	quit         *tview.Modal
+	info         *tview.Modal
+	dependencies []Dependency
 }
 
-func Start() {
+func startUI(d []Dependency) {
 	v := &view{
-		app:    tview.NewApplication(),
-		pages:  tview.NewPages(),
-		table:  tview.NewTable(),
-		update: tview.NewModal(),
-		quit:   tview.NewModal(),
+		app:          tview.NewApplication(),
+		pages:        tview.NewPages(),
+		table:        tview.NewTable(),
+		update:       tview.NewModal(),
+		quit:         tview.NewModal(),
+		info:         tview.NewModal(),
+		dependencies: d,
 	}
 
+	v.setInfoModal()
 	v.setUpdateModal()
 	v.setQuitModal()
 	v.setTable()
@@ -33,9 +39,18 @@ func Start() {
 	}
 }
 
+func (v *view) setInfoModal() {
+	v.info.AddButtons([]string{"OK"}).
+		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+			v.pages.SendToBack("info")
+		})
+
+	v.pages.AddPage("info", v.info, true, true)
+	v.pages.SendToBack("info")
+}
+
 func (v *view) setUpdateModal() {
-	v.update.SetText("Do you want to update?").
-		AddButtons([]string{"Yes", "No"})
+	v.update.AddButtons([]string{"Yes", "No"})
 
 	v.pages.AddPage("update", v.update, true, true)
 	v.pages.SendToBack("update")
@@ -59,7 +74,7 @@ func (v *view) setQuitModal() {
 func (v *view) setTable() {
 
 	colsHeader := []string{"PATH", "NAME", "CURRENT VERSION", "UPDATE VERSION"}
-	cols, rows := 4, len(dependencies)+1
+	cols, rows := 4, len(v.dependencies)+1
 	for r := 0; r < rows; r++ {
 		for c := 0; c < cols; c++ {
 			color := tcell.ColorWhite
@@ -84,7 +99,7 @@ func (v *view) setTable() {
 					SetAlign(align).
 					SetSelectable(false)
 			} else {
-				tableCell = tview.NewTableCell(getString(r-1, c)).
+				tableCell = tview.NewTableCell(v.getString(r-1, c)).
 					SetTextColor(color).
 					SetAlign(align).
 					SetSelectable(c != 0)
@@ -107,17 +122,14 @@ func (v *view) setTable() {
 			}
 		}).
 		SetSelectedFunc(func(row int, column int) {
+			dependency := v.dependencies[row-1]
 			v.pages.SendToFront("update")
-			v.update.SetText(fmt.Sprintf("Do you want to upgrade %s for %s?", dependencies[row-1].name, dependencies[row-1].path)).
+			v.update.SetText(fmt.Sprintf("Do you want to upgrade %s for %s?", dependency.name, dependency.path)).
 				SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-					if buttonLabel == "Yes" {
-						// TODO:  update module
-
-						for c := 1; c < cols; c++ {
-							v.table.GetCell(row, c).SetTextColor(tcell.ColorWhite).SetSelectable(false)
-						}
-					}
 					v.pages.SendToBack("update")
+					if buttonLabel == "Yes" {
+						v.upgrade(row, cols)
+					}
 
 				})
 		})
@@ -125,8 +137,27 @@ func (v *view) setTable() {
 	v.pages.AddPage("table", v.table, true, true)
 }
 
-func getString(row, col int) string {
-	value := dependencies[row]
+func (v *view) upgrade(row, cols int) {
+	dependency := v.dependencies[row-1]
+	v.info.SetText("Upgrading...")
+	v.pages.SendToFront("info")
+
+	cmd := exec.Command("go", "get", dependency.name)
+	cmd.Dir = dependency.path
+	_, err := cmd.Output()
+	if err != nil {
+		v.info.SetText("Error occured: " + err.Error())
+	} else {
+		v.info.SetText("Success!")
+
+		for c := 1; c < cols; c++ {
+			v.table.GetCell(row, c).SetTextColor(tcell.ColorWhite).SetSelectable(false)
+		}
+	}
+}
+
+func (v *view) getString(row, col int) string {
+	value := v.dependencies[row]
 	switch col {
 	case 0:
 		return value.path
