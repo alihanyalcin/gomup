@@ -76,7 +76,7 @@ func run(path string) error {
 	}
 
 	Start()
-	// drawTable()
+	//drawTable()
 
 	//for k, v := range dependencies {
 	//fmt.Println(k, v)
@@ -140,7 +140,8 @@ func findDepencencies(path string) error {
 
 	for _, dep := range strings.Split(string(list), "\n") {
 		if dep != "''" && dep != "" {
-			d := strings.Split(dep, " ")
+			dep = strings.Trim(dep, "'")
+			d := strings.Split(strings.Trim(dep, "'"), " ")
 			dependencies = append(dependencies, Dependency{
 				path:          path,
 				name:          d[0],

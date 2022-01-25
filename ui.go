@@ -28,7 +28,7 @@ func Start() {
 	v.setQuitModal()
 	v.setTable()
 
-	if err := v.app.SetRoot(v.pages, true).SetFocus(v.pages).EnableMouse(true).Run(); err != nil {
+	if err := v.app.SetRoot(v.pages, true).SetFocus(v.table).EnableMouse(true).Run(); err != nil {
 		panic(err)
 	}
 }
@@ -57,35 +57,48 @@ func (v *view) setQuitModal() {
 }
 
 func (v *view) setTable() {
-	v.table.SetBorders(true)
 
-	colsHeader := []string{"Path", "Name", "Current Version", "Update Version"}
+	colsHeader := []string{"PATH", "NAME", "CURRENT VERSION", "UPDATE VERSION"}
 	cols, rows := 4, len(dependencies)+1
 	for r := 0; r < rows; r++ {
 		for c := 0; c < cols; c++ {
 			color := tcell.ColorWhite
-			if c < 1 || r < 1 {
-				color = tcell.ColorYellow
+			if c == 0 && r != 0 {
+				color = tcell.ColorDarkCyan
+			} else if c != 0 && r != 0 {
+				color = tcell.ColorRed
 			}
 
+			align := tview.AlignLeft
+			if r == 0 {
+				align = tview.AlignCenter
+			} else if c == 0 {
+				align = tview.AlignRight
+			}
+
+			var tableCell *tview.TableCell
 			// Set Headers
 			if r == 0 {
-				v.table.SetCell(r, c,
-					tview.NewTableCell(colsHeader[c]).
-						SetTextColor(color).
-						SetAlign(tview.AlignCenter).
-						SetSelectable(false))
-
-				continue
+				tableCell = tview.NewTableCell(colsHeader[c]).
+					SetTextColor(color).
+					SetAlign(align).
+					SetSelectable(false)
+			} else {
+				tableCell = tview.NewTableCell(getString(r-1, c)).
+					SetTextColor(color).
+					SetAlign(align).
+					SetSelectable(c != 0)
 			}
 
-			v.table.SetCell(r, c,
-				tview.NewTableCell(getString(r-1, c)).
-					SetTextColor(color).
-					SetAlign(tview.AlignCenter))
+			v.table.SetCell(r, c, tableCell)
+
+			if c > 0 && c < 4 {
+				tableCell.SetExpansion(1)
+			}
 		}
 	}
 
+	v.table.SetBorders(true)
 	v.table.SetSelectable(true, false)
 	v.table.Select(1, 0).SetFixed(1, 0).
 		SetDoneFunc(func(key tcell.Key) {
@@ -95,11 +108,14 @@ func (v *view) setTable() {
 		}).
 		SetSelectedFunc(func(row int, column int) {
 			v.pages.SendToFront("update")
-			v.update.SetText(fmt.Sprintf("Do you want to update %s?", dependencies[row-1].path)).
+			v.update.SetText(fmt.Sprintf("Do you want to upgrade %s for %s?", dependencies[row-1].name, dependencies[row-1].path)).
 				SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 					if buttonLabel == "Yes" {
-						// TODO:  update
-						v.table.GetCell(row, column).SetTextColor(tcell.ColorRed)
+						// TODO:  update module
+
+						for c := 1; c < cols; c++ {
+							v.table.GetCell(row, c).SetTextColor(tcell.ColorWhite).SetSelectable(false)
+						}
 					}
 					v.pages.SendToBack("update")
 
