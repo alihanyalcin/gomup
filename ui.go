@@ -5,28 +5,46 @@ import (
 	"github.com/rivo/tview"
 )
 
+type view struct {
+	app       *tview.Application
+	pages     *tview.Pages
+	table     *tview.Table
+	quitModal *tview.Modal
+}
+
 func Start() {
+	v := &view{
+		app:       tview.NewApplication(),
+		pages:     tview.NewPages(),
+		table:     tview.NewTable(),
+		quitModal: tview.NewModal(),
+	}
 
-	app := tview.NewApplication()
-	pages := tview.NewPages()
+	v.setQuitModal()
+	v.setTable()
 
-	// Quit Modal
-	quitModal := tview.NewModal().
-		SetText("Do you want to quit?").
+	if err := v.app.SetRoot(v.pages, true).SetFocus(v.pages).EnableMouse(true).Run(); err != nil {
+		panic(err)
+	}
+}
+
+func (v *view) setQuitModal() {
+	v.quitModal.SetText("Do you want to quit?").
 		AddButtons([]string{"Quit", "Cancel"}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 			if buttonLabel == "Quit" {
-				app.Stop()
+				v.app.Stop()
 			} else {
-				pages.SendToBack("quit")
+				v.pages.SendToBack("quit")
 			}
 		})
 
-	pages.AddPage("quit", quitModal, true, true)
-	pages.SendToBack("quit")
+	v.pages.AddPage("quit", v.quitModal, true, true)
+	v.pages.SendToBack("quit")
+}
 
-	table := tview.NewTable().SetBorders(true)
-	pages.AddPage("table", table, true, true)
+func (v *view) setTable() {
+	v.table.SetBorders(true)
 
 	colsHeader := []string{"Path", "Name", "Current Version", "Update Version"}
 	cols, rows := 4, len(dependencies)+1
@@ -39,7 +57,7 @@ func Start() {
 
 			// Set Headers
 			if r == 0 {
-				table.SetCell(r, c,
+				v.table.SetCell(r, c,
 					tview.NewTableCell(colsHeader[c]).
 						SetTextColor(color).
 						SetAlign(tview.AlignCenter).
@@ -48,28 +66,26 @@ func Start() {
 				continue
 			}
 
-			table.SetCell(r, c,
+			v.table.SetCell(r, c,
 				tview.NewTableCell(getString(r-1, c)).
 					SetTextColor(color).
 					SetAlign(tview.AlignCenter))
 		}
 	}
 
-	table.SetSelectable(true, false)
-	table.Select(0, 0).SetFixed(1, 0).
+	v.table.SetSelectable(true, false)
+	v.table.Select(1, 0).SetFixed(1, 0).
 		SetDoneFunc(func(key tcell.Key) {
 			if key == tcell.KeyEscape {
-				pages.SendToFront("quit")
+				v.pages.SendToFront("quit")
 			}
 		}).
 		SetSelectedFunc(func(row int, column int) {
 			// TODO: add update modal
-			table.GetCell(row, column).SetTextColor(tcell.ColorRed)
+			v.table.GetCell(row, column).SetTextColor(tcell.ColorRed)
 		})
 
-	if err := app.SetRoot(pages, true).EnableMouse(true).Run(); err != nil {
-		panic(err)
-	}
+	v.pages.AddPage("table", v.table, true, true)
 }
 
 func getString(row, col int) string {
