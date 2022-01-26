@@ -77,7 +77,7 @@ func (v *view) setQuitModal() {
 }
 
 func (v *view) setTable() {
-	v.table.SetBorder(true).SetTitle("gomUP - ESC: quit - ENTER: update").SetTitleAlign(tview.AlignCenter)
+	v.table.SetBorder(true).SetTitle("gomUP - ESC: quit - ENTER: upgrade").SetTitleAlign(tview.AlignCenter)
 
 	colsHeader := []string{"PATH", "NAME", "CURRENT VERSION", "UPDATE VERSION"}
 	cols, rows := len(colsHeader), len(v.dependencies)+1
