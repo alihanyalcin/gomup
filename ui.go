@@ -77,6 +77,7 @@ func (v *view) setQuitModal() {
 }
 
 func (v *view) setTable() {
+	v.table.SetBorder(true).SetTitle("gomUP - ESC: quit - ENTER: update").SetTitleAlign(tview.AlignCenter)
 
 	colsHeader := []string{"PATH", "NAME", "CURRENT VERSION", "UPDATE VERSION"}
 	cols, rows := len(colsHeader), len(v.dependencies)+1
@@ -102,7 +103,8 @@ func (v *view) setTable() {
 				tableCell = tview.NewTableCell(colsHeader[c]).
 					SetTextColor(color).
 					SetAlign(align).
-					SetSelectable(false)
+					SetSelectable(false).
+					SetAttributes(tcell.AttrBold)
 			} else {
 				tableCell = tview.NewTableCell(v.getString(r-1, c)).
 					SetTextColor(color).
