@@ -6,7 +6,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 )
 
-func drawTable(dependencies []Dependency) {
+func drawTable(dependencies []dependency) {
 	var data [][]string
 	for _, v := range dependencies {
 		data = append(data, []string{

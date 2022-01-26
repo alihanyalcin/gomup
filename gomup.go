@@ -102,9 +102,9 @@ func checkPath(path string) error {
 	return nil
 }
 
-func find(path string) []Dependency {
+func find(path string) []dependency {
 	var wg sync.WaitGroup
-	var dependencies []Dependency
+	var dependencies []dependency
 
 	err := filepath.Walk(path,
 		func(path string, info os.FileInfo, err error) error {
@@ -137,8 +137,8 @@ func find(path string) []Dependency {
 	return dependencies
 }
 
-func findDepencencies(path string) ([]Dependency, error) {
-	var dependencies []Dependency
+func findDepencencies(path string) ([]dependency, error) {
+	var dependencies []dependency
 
 	cmd := exec.Command("go", args...)
 	cmd.Dir = path
@@ -151,7 +151,7 @@ func findDepencencies(path string) ([]Dependency, error) {
 		if dep != "''" && dep != "" {
 			dep = strings.Trim(dep, "'")
 			d := strings.Split(strings.Trim(dep, "'"), " ")
-			dependencies = append(dependencies, Dependency{
+			dependencies = append(dependencies, dependency{
 				path:          path,
 				name:          d[0],
 				version:       d[1],

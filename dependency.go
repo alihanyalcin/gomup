@@ -1,6 +1,6 @@
 package main
 
-type Dependency struct {
+type dependency struct {
 	path          string
 	name          string
 	version       string

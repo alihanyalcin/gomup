@@ -16,10 +16,10 @@ type view struct {
 	update       *tview.Modal
 	quit         *tview.Modal
 	info         *tview.Modal
-	dependencies []Dependency
+	dependencies []dependency
 }
 
-func startUI(d []Dependency) {
+func startUI(d []dependency) {
 	sort.Slice(d, func(i, j int) bool {
 		return d[i].path < d[j].path
 	})
@@ -79,7 +79,7 @@ func (v *view) setQuitModal() {
 func (v *view) setTable() {
 
 	colsHeader := []string{"PATH", "NAME", "CURRENT VERSION", "UPDATE VERSION"}
-	cols, rows := 4, len(v.dependencies)+1
+	cols, rows := len(colsHeader), len(v.dependencies)+1
 	for r := 0; r < rows; r++ {
 		for c := 0; c < cols; c++ {
 			color := tcell.ColorWhite
@@ -97,8 +97,8 @@ func (v *view) setTable() {
 			}
 
 			var tableCell *tview.TableCell
-			// Set Headers
 			if r == 0 {
+				// Set Headers
 				tableCell = tview.NewTableCell(colsHeader[c]).
 					SetTextColor(color).
 					SetAlign(align).
@@ -143,9 +143,9 @@ func (v *view) setTable() {
 }
 
 func (v *view) upgrade(row, cols int) {
-	dependency := v.dependencies[row-1]
-	v.info.SetText("Upgrading...")
 	v.pages.SendToFront("info")
+
+	dependency := v.dependencies[row-1]
 
 	cmd := exec.Command("go", "get", dependency.name)
 	cmd.Dir = dependency.path
