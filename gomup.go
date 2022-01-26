@@ -33,8 +33,8 @@ func main() {
 	)
 
 	app := &cli.App{
-		Name:  "gomup",
-		Usage: "go module dependency upgrader",
+		Name:  "gomUP",
+		Usage: "go module dependency upgrade tool",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "path",
