@@ -5,14 +5,29 @@ projects and Go projects that contain multiple modules.
 
 ![gomUP UI](gomup.png)
 
-# [Install](https://github.com/alihanyalcin/gomup/releases)
+# Install
+
+Go to the [releases page](https://github.com/alihanyalcin/gomup/releases), and download the binaries for your operating
+system (macOS, Linux, and Windows). <br/><br/>
+Alternatively, <br/>
+You can install it using `go install`:
 
 ```
 go install github.com/alihanyalcin/gomup@latest
 ```
 
+Or, use `homebrew`:
+
+```
+brew tap alihanyalcin/gomup
+brew install gomup
+```
+
 # Usage
 
 ```
-gomup -p <project-file>
+gomup -p <project-directory-path>
 ```
+
+After you hit the enter, **gomUP** starts to walk through your project directory path to find go modules. It may take a
+while to collect all modules and dependencies.
