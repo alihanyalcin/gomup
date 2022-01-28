@@ -1,4 +1,4 @@
-module gomup
+module github.com/alihanyalcin/gomup
 
 go 1.17
 
